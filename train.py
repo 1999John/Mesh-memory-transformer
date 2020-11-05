@@ -1,44 +1,10 @@
 import tensorflow as tf
 from transformer.utils import create_padding_mask, create_look_ahead_mask
 from utils.config import Config
+from utils.losses import *
 from transformer.Transformer import Transformer
 from utils.optimizer import *
-
-loss_object = tf.keras.losses.SparseCategoricalCrossentropy(
-    from_logits=False, reduction='none')
-
-
-def loss_function(real, pred):
-    mask = tf.math.logical_not(tf.math.equal(real, 0))
-    loss_ = loss_object(real, pred)
-
-    mask = tf.cast(mask, dtype=loss_.dtype)
-    loss_ *= (mask+1e-6)
-
-    # print(mask.shape,loss_.shape,tf.reduce_mean(loss_))
-    return tf.reduce_mean(loss_)
-
-
-train_loss = tf.keras.metrics.Mean(name='train_loss')
-train_accuracy = tf.keras.metrics.SparseCategoricalAccuracy(
-    name='train_accuracy')
-
-
-def Set_GPU_Memory_Growth():
-    gpus = tf.config.experimental.list_physical_devices('GPU')
-    if gpus:
-        try:
-            # 设置 GPU 显存占用为按需分配
-            for gpu in gpus:
-                tf.config.experimental.set_memory_growth(gpu, True)
-            logical_gpus = tf.config.experimental.list_logical_devices('GPU')
-            print(len(gpus), "Physical GPUs,", len(logical_gpus), "Logical GPUs")
-        except RuntimeError as e:
-            # 异常处理
-            print(e)
-    else:
-        print('No GPU')
-
+from utils.use_cuda import Set_GPU_Memory_Growth
 
 Set_GPU_Memory_Growth()
 
@@ -57,15 +23,16 @@ def create_masks(inp, tar):
     return combined_mask, dec_padding_mask
 
 
-lr = CustomSchedule(512)
-optimizer = tf.keras.optimizers.Adam(lr, beta_1=0.9, beta_2=0.98, epsilon=1e-9)
+# lr = CustomSchedule(1e-6)
+optimizer = tf.keras.optimizers.Adam(learning_rate=2048,
+                                     beta_1=0.9,beta_2=0.98)
 
 # def __init__(self,num_layers,d_model,num_heads,num_memory,dff,target_vocab_size,pe_target,rate=0.1):
 transformer = Transformer(Config.num_layers, Config.d_model, Config.num_heads, Config.num_memory, Config.ffn,
                           Config.target_vocab_size,
                           pe_target=Config.target_vocab_size,
                           rate=Config.dropout_rate)
-
+# transformer.load_weights("1028/new_0")
 
 def train_step(inp, tar):
     tar_inp = tar[:, :-1]
@@ -83,8 +50,8 @@ def train_step(inp, tar):
                                   dec_padding_mask)
         loss = loss_function(tar_real, predictions)
     gradients = tape.gradient(loss, transformer.trainable_variables)
+    # print(transformer.trainable_variables)
     optimizer.apply_gradients(zip(gradients, transformer.trainable_variables))
-    print(loss)
     train_loss(loss)
     train_accuracy(tar_real, predictions)
 
@@ -92,9 +59,9 @@ def train_step(inp, tar):
 import time
 from data.dataset import create_datasets_1000, get_train
 
-train_dataset = create_datasets_1000(2)
+train_dataset = create_datasets_1000(Config.batch_size)
 
-# train_img,train_cap = get_train(0)
+
 try:
     for epoch in range(Config.EPOCHS):
         start = time.time()
@@ -104,18 +71,17 @@ try:
 
         for (batch, (inp, tar)) in enumerate(train_dataset):
             train_step(inp, tar)
-
+            # print(transformer.trainable_variables)
             if batch % 10 == 0:
                 print('Epoch {} Batch {} Loss {:.4f} Accuracy {:.4f}'.format(
                     epoch + 1, batch, train_loss.result(), train_accuracy.result()))
-                transformer.save_weights("/home/mist/Mesh_memory/1028/new_{}".format(epoch))
-
-        if (epoch + 1) % 5 == 0:
-            transformer.save_weights("/home/mist/Mesh_memory/1028/train_{}".format(epoch))
+            if batch % 2000==0:
+                transformer.save_weights("/home/mist/Mesh/1104/epoch_{}_batch_{}".format(epoch,batch))
 
         print('Epoch {} Loss {:.4f} Accuracy {:.4f}'.format(epoch + 1,
                                                             train_loss.result(),
                                                             train_accuracy.result()))
+        transformer.save_weights("/home/mist/Mesh/1104/epoch_{}".format(epoch))
 
         print('Time taken for 1 epoch: {} secs\n'.format(time.time() - start))
 

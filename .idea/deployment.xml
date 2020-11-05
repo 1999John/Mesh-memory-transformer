@@ -1,7 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
-  <component name="PublishConfigData" autoUpload="Always" serverName="mist@ygg.mistgpu.xyz:52000 password" createEmptyFolders="true" remoteFilesAllowedToDisappearOnAutoupload="false">
+  <component name="PublishConfigData" autoUpload="Always" serverName="mist@gpu19.mistgpu.xyz:32000" createEmptyFolders="true" remoteFilesAllowedToDisappearOnAutoupload="false">
     <serverData>
+      <paths name="072">
+        <serverdata>
+          <mappings>
+            <mapping local="$PROJECT_DIR$" web="/" />
+          </mappings>
+        </serverdata>
+      </paths>
+      <paths name="mist@gpu19.mistgpu.xyz:32000">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/home/mist/Mesh/" local="$PROJECT_DIR$" />
+          </mappings>
+        </serverdata>
+      </paths>
       <paths name="mist@ygg.mistgpu.xyz:52000 password">
         <serverdata>
           <mappings>

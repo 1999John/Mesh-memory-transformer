@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WebServers">
+    <option name="servers">
+      <webServer id="8d971dd8-cd82-4e3e-b678-3558f5616a5c" name="072" url="http://gpu19.mistgpu.xyz">
+        <fileTransfer rootFolder="/home/mist" accessType="SFTP" host="gpu19.mistgpu.xyz" port="32000" sshConfigId="d331030e-7753-4c8b-8f8b-553644d92c77" sshConfig="mist@gpu19.mistgpu.xyz:32000 password">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" passiveMode="true" shareSSLContext="true" />
+          </advancedOptions>
+        </fileTransfer>
+      </webServer>
+    </option>
+  </component>
+</project>

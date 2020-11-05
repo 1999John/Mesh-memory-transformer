@@ -13,3 +13,10 @@ def get_train(batch_size):
     train_img, train_cap = np.load("/home/mist/Mesh_memory/data/resnet101_img_train_2.npy"), np.load(
         "/home/mist/Mesh_memory/data/resnet101_cap_train_2.npy")
     return train_img,train_cap
+
+if __name__=="__main__":
+    dataset = create_datasets_1000(2)
+    for i,j in dataset:
+        print(i)
+        print(j)
+        break

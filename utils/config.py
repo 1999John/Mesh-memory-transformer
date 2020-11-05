@@ -5,7 +5,7 @@ class Config:
     num_heads = 8
     num_memory = 40
 
-
+    batch_size=2
     target_vocab_size = 5000+2
 
     dropout_rate = 0.1

@@ -6,7 +6,7 @@ from transformer.utils import *
 
 
 class MeshMemoryMultiHeadAttention(Layer):
-    def __init__(self,num_heads,d_model,num_memory):
+    def __init__(self,num_heads,d_model,num_memory,name):
         """
 
         :param d_model: 输出维度
@@ -18,21 +18,26 @@ class MeshMemoryMultiHeadAttention(Layer):
         """
         super(MeshMemoryMultiHeadAttention,self).__init__()
 
+        self._name = name
+
         self.num_heads = num_heads
         self.num_memory = num_memory
         self.d_model = d_model
 
         self.depth=self.d_model//self.num_heads
 
-        self.wq = tf.keras.layers.Dense(d_model,name="memoryquery")
-        self.wk = tf.keras.layers.Dense(d_model,name="memorykey")
-        self.wv = tf.keras.layers.Dense(d_model,name="memoryvalue")
+        self.wq = tf.keras.layers.Dense(d_model,name=self._name +"_mesh_query",activation='relu')
+        self.wk = tf.keras.layers.Dense(d_model,name=self._name +"_mesh_key",activation='relu')
+        self.wv = tf.keras.layers.Dense(d_model,name=self._name +"_mesh_value",activation='relu')
 
+        self.bn1 = tf.keras.layers.BatchNormalization(name=self._name+'bn1')
+        self.bn2 = tf.keras.layers.BatchNormalization(name=self._name + 'bn2')
+        self.bn3 = tf.keras.layers.BatchNormalization(name=self._name + 'bn3')
 
-        self.k_memory = tf.random.normal((1,self.num_memory,d_model))
-        self.v_memory = tf.random.normal((1,self.num_memory,d_model))
+        self.k_memory = tf.random.normal((1,self.num_memory,d_model),mean=10,stddev=5)
+        self.v_memory = tf.random.normal((1,self.num_memory,d_model),mean=10,stddev=5)
 
-        self.dense = tf.keras.layers.Dense(d_model,name='memorydense')
+        self.dense = tf.keras.layers.Dense(d_model,name=self._name +"_mesh_dense",activation='relu')
 
     def split_heads(self,x,batch_size):
         """
@@ -46,12 +51,15 @@ class MeshMemoryMultiHeadAttention(Layer):
 
         return tf.transpose(x,perm=[0,2,1,3])
 
-    def call(self,q,k,v,mask):
+    def call(self,q,k,v,mask,training=None):
         batch_size = tf.shape(q)[0]
 
         q = self.wq(q) # (batch_size,seq_len_q,d_model)
+        q = self.bn1(q,training)
         k = self.wk(k) # (batch_size,seq_len_k,d_model)
+        k = self.bn2(k,training)
         v = self.wv(v) # (batch_size,seq_len_v,d_model)
+        v = self.bn3(v,training)
 
 
         k = tf.concat([k,tf.tile(self.k_memory,[k.shape[0],1,1])],axis=1) # (batch_size,seq_len_k+num_memory,d_model)
@@ -78,7 +86,7 @@ class MeshMemoryMultiHeadAttention(Layer):
         return mesh_attention,attention_weights
 
 class MultiHeadAttention(Layer):
-    def __init__(self,num_heads,d_model):
+    def __init__(self,num_heads,d_model,name):
         """
 
         :param d_model: 输出维度
@@ -94,11 +102,16 @@ class MultiHeadAttention(Layer):
 
         self.depth=self.d_model//self.num_heads
 
-        self.wq = tf.keras.layers.Dense(d_model,name=self.name+' MUTIquery')
-        self.wk = tf.keras.layers.Dense(d_model,name=self.name+' MUTIkey')
-        self.wv = tf.keras.layers.Dense(d_model,name=self.name+' MUTIvalue')
+        self._name = name
+        self.wq = tf.keras.layers.Dense(d_model,name=self._name+' query',activation='relu')
+        self.wk = tf.keras.layers.Dense(d_model,name=self._name+' key',activation='relu')
+        self.wv = tf.keras.layers.Dense(d_model,name=self._name+' value',activation='relu')
 
-        self.dense = tf.keras.layers.Dense(d_model,name=self.name+'MUTIdense')
+        self.bn1 = tf.keras.layers.BatchNormalization(name=self._name+'bn1')
+        self.bn2 = tf.keras.layers.BatchNormalization(name=self._name + 'bn2')
+        self.bn3 = tf.keras.layers.BatchNormalization(name=self._name + 'bn3')
+
+        self.dense = tf.keras.layers.Dense(d_model,name=self._name+'dense',activation='relu')
 
     def split_heads(self,x,batch_size):
         """
@@ -112,12 +125,15 @@ class MultiHeadAttention(Layer):
 
         return tf.transpose(x,perm=[0,2,1,3])
 
-    def call(self,q,k,v,mask):
+    def call(self,q,k,v,mask,training):
         batch_size = tf.shape(q)[0]
 
         q = self.wq(q) # (batch_size,seq_len_q,d_model)
+        q = self.bn1(q,training)
         k = self.wk(k) # (batch_size,seq_len_k,d_model)
+        k = self.bn2(k,training)
         v = self.wv(v) # (batch_size,seq_len_v,d_model)
+        v = self.bn3(v,training)
 
         q = self.split_heads(q,batch_size) # (bsz,num_heads,seq_len_q,d_model')
         k = self.split_heads(k,batch_size) # (bsz,num_heads,seq_len_k+num_memory,d_model')
